@@ -30,18 +30,17 @@ The setup is fairly easy, just compile for windows and specify what URL you want
 #### OPSEC NOTE: Package github.com/mitchellh/go-ps: this will output your go path, I'm trying to work out how to remove this soon!
 ![](imgs/opsec.png)
 
-
 ### 64 Bit
 
 
 ```go
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -gcflags=-trimpath=/path/to/SandboxSpy -asmflags=-trimpath=/path/to/SandboxSpy SandboxSpy.go
+GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=/path/to/SandboxSpy -asmflags=-trimpath=/path/to/SandboxSpy SandboxSpy.go
 ```
 
 ### 32 Bit
 
 ```go
-GOOS=windows GOARCH=386 go build -ldflags="-s -w" SandboxSpy.go
+GOOS=windows GOARCH=386 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=/path/to/SandboxSpy -asmflags=-trimpath=/path/to/SandboxSpy SandboxSpy.go
 ```
 
 ## Running the Thing
