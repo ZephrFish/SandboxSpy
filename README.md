@@ -63,4 +63,4 @@ Decoded output from decoder.exe:
 Going to update this list with interesting processes spawned inside sandboxes, so we can build better malware.
 
 - srvhost.exe - Any.run process
-- 
+
