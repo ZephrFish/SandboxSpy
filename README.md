@@ -64,3 +64,12 @@ Going to update this list with interesting processes spawned inside sandboxes, s
 
 - srvhost.exe - Any.run process
 
+## Todo List
+- Identify Exfil techniques
+  - DNS
+  - HTTP/S
+  - SMTP
+  - SMB
+
+- Identify sandboxes based on IP range/Hostnames/Information
+
