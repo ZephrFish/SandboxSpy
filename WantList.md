@@ -1,0 +1,17 @@
+# List of Wants
+- Protocol out connect testing
+    - SMB
+    - HTTP
+    - SMTP
+    - DNS
+    - TCP
+    - ICMP/PING
+- Initial host recon
+    - ENV Variables
+    - Hostname
+    - Username
+    - Domain  
+- Blacklist of Useragents/IPs/IoCs of Sandboxes
+    - User Agents
+    - IP List of Defensive Providers
+    - Other IoCs
