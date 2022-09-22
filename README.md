@@ -25,6 +25,8 @@ Output:
 "win-vua6pouv5up\\john\r\nWIN-VUA6POUV5UP\r\nWIN-VUA6POUV5UPJohnC:\\Program Files\\Python36\\lib\\site-packages\\pywin32_system32;C:\\Program Files (x86)\\Windows Resource Kits\\Tools\\;C:\\Program Files\\Python36\\Scripts\\;C:\\Program Files\\Python36\\;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;c:\\python27;c:\\Windows\\Syswow64;C:\\Users\\John\\AppData\\Local\\Microsoft\\WindowsApps;"
 ```
 
+Then to tweak the output and make it look nice a simple sed will tidy it up: `sed 's/\\r/\n/g;s/;/\n/g;s/"//g' output.txt`
+
 # Setup and Install
 The setup is fairly easy, just compile for windows and specify what URL you want to call back to.
 #### OPSEC NOTE: Package github.com/mitchellh/go-ps: this will output your go path, I'm trying to work out how to remove this soon!
