@@ -1,5 +1,6 @@
 # SandboxSpy
 ![](imgs/logo.png)
+
 (It only has a logo as I got bored in MSPAINT)
 
 Initially an idea to profile sandboxes, the code is written to take enviromental variables and send them back in a Base32 string over HTTP to an endpoint.
