@@ -1,16 +1,13 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Build SandboxSpy
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -21,8 +18,25 @@ jobs:
       with:
         go-version: '1.20'
 
-    - name: Build
-      run: go build -v ./...
+    - name: Get dependencies
+      run: |
+        go get github.com/mitchellh/go-ps
+        go mod tidy
 
-    - name: Test
-      run: go test -v ./...
+    - name: Build Windows 64-bit
+      run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=$GITHUB_WORKSPACE -asmflags=-trimpath=$GITHUB_WORKSPACE -o SandboxSpy_amd64.exe SandboxSpy.go
+
+    - name: Build Windows 32-bit
+      run: GOOS=windows GOARCH=386 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=$GITHUB_WORKSPACE -asmflags=-trimpath=$GITHUB_WORKSPACE -o SandboxSpy_386.exe SandboxSpy.go
+
+    - name: Build decoder
+      run: go build -o decoder decoder.go
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: SandboxSpy-binaries
+        path: |
+          SandboxSpy_amd64.exe
+          SandboxSpy_386.exe
+          decoder
