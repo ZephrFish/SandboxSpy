@@ -1,78 +1,135 @@
 # SandboxSpy
-![](imgs/logo.png)
 
-(It only has a logo as I got bored in MSPAINT)
+A sandbox detection and monitoring system that collects environmental data from potentially malicious environments to build blocklists for security researchers.
 
-Initially an idea to profile sandboxes, the code is written to take enviromental variables and send them back in a Base32 string over HTTP to an endpoint.
+## Overview
 
-The primary goal is to understand if we're in a sandbox or not based on the path and domain/username. Eventual plans are to build out blacklists of information to build into our C2 and malware development.
+SandboxSpy consists of a client that detects sandbox environments and a server that collects and aggregates this data. The system identifies sandboxes through various detection methods including hostname patterns, MAC addresses, running processes, and timing anomalies.
 
-# Setup
-In order to compile you'll need to get `github.com/mitchellh/go-ps` this can be done by doing:
+## Features
 
-```go
-go get github.com/mitchellh/go-ps
+- Multiple sandbox detection techniques
+- Client-server architecture with REST API
+- Real-time WebSocket updates
+- Web dashboard for monitoring
+- Automatic blocklist generation in multiple formats (JSON, CSV, TXT, Snort, IOC)
+- Docker deployment support
+- CloudFront CDN integration
+
+## Quick Start
+
+### Build Windows Clients
+
+```bash
+# Build Windows executables with embedded server URL
+SERVER_URL="https://your-server.com" API_KEY="your-api-key" ./build-windows.sh
+
+# Output files will be in output/ directory:
+# - SandboxSpy-x64.exe (64-bit Windows)
+# - SandboxSpy-x86.exe (32-bit Windows)
 ```
 
-# What stuff is
-- SandBoxSpy.go -  This is the main tool; there was an initial binary in the repository, but I've removed this and kept the GO source code for folks to read.
-- decoder.go - Takes the Base32 string and decodes it; there is a compiled binary version that will simply decode base32; although there is nothing malicious in this binary, I still recommend you compile it yourself for peace of mind. Pass in an example:
+### Run Server Locally
 
-```cmd
-decoder.exe O5UW4LLWOVQTM4DPOV3DK5LQLRVG62DOBUFFOSKOFVLFKQJWKBHVKVRVKVIA2CSXJFHC2VSVIE3FAT2VKY2VKUCKN5UG4QZ2LRIHE33HOJQW2ICGNFWGK424KB4XI2DPNYZTMXDMNFRFY43JORSS24DBMNVWCZ3FONOHA6LXNFXDGMS7ON4XG5DFNUZTEO2DHJOFA4TPM5ZGC3JAIZUWYZLTEAUHQOBWFFOFO2LOMRXXO4ZAKJSXG33VOJRWKICLNF2HGXCUN5XWY424HNBTUXCQOJXWO4TBNUQEM2LMMVZVYUDZORUG63RTGZOFGY3SNFYHI424HNBTUXCQOJXWO4TBNUQEM2LMMVZVYUDZORUG63RTGZODWQZ2LRLWS3TEN53XGXDTPFZXIZLNGMZDWQZ2LRLWS3TEN53XGO2DHJOFO2LOMRXXO424KN4XG5DFNUZTEXCXMJSW2O2DHJOFO2LOMRXXO424KN4XG5DFNUZTEXCXNFXGI33XONIG653FOJJWQZLMNROHMMJOGBODWYZ2LRYHS5DIN5XDENZ3MM5FYV3JNZSG653TLRJXS43XN53TMNB3IM5FYVLTMVZHGXCKN5UG4XCBOBYEIYLUMFOEY33DMFWFYTLJMNZG643PMZ2FYV3JNZSG653TIFYHA4Z3
-```
-Output:
-```cmd
-"win-vua6pouv5up\\john\r\nWIN-VUA6POUV5UP\r\nWIN-VUA6POUV5UPJohnC:\\Program Files\\Python36\\lib\\site-packages\\pywin32_system32;C:\\Program Files (x86)\\Windows Resource Kits\\Tools\\;C:\\Program Files\\Python36\\Scripts\\;C:\\Program Files\\Python36\\;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;c:\\python27;c:\\Windows\\Syswow64;C:\\Users\\John\\AppData\\Local\\Microsoft\\WindowsApps;"
+```bash
+# Start server on port 8080
+go run cmd/server/main.go
+
+# Access dashboard at http://localhost:8080/dashboard/
 ```
 
-Then to tweak the output and make it look nice a simple sed will tidy it up: `sed 's/\\r/\n/g;s/;/\n/g;s/"//g' output.txt`
+### Docker Deployment
 
-# Setup and Install
-The setup is fairly easy, just compile for windows and specify what URL you want to call back to.
-#### OPSEC NOTE: Package github.com/mitchellh/go-ps: this will output your go path, I'm trying to work out how to remove this soon!
-![](imgs/opsec.png)
+```bash
+# Production deployment with Docker Compose
+cd deployments/docker
+docker-compose -f docker-compose.prod.yml up -d
 
-### 64 Bit
-
-
-```go
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=/path/to/SandboxSpy -asmflags=-trimpath=/path/to/SandboxSpy SandboxSpy.go
+# This starts:
+# - Nginx reverse proxy with SSL
+# - SandboxSpy server
+# - PostgreSQL database
+# - Redis cache
 ```
 
-### 32 Bit
+## API Endpoints
 
-```go
-GOOS=windows GOARCH=386 go build -ldflags="-s -w -H=windowsgui" -gcflags=-trimpath=/path/to/SandboxSpy -asmflags=-trimpath=/path/to/SandboxSpy SandboxSpy.go
+- `GET /api/v1/health` - Health check
+- `POST /api/v1/sandbox` - Submit sandbox data
+- `GET /api/v1/sandbox` - List sandbox entries
+- `GET /api/v1/blocklist` - Get blocklist
+- `GET /api/v1/export` - Export data in various formats
+- `GET /api/v1/stats` - Get statistics
+- `WS /ws` - WebSocket for real-time updates
+
+## Configuration
+
+Server configuration is done through `server_config.json`:
+
+```json
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "database_path": "sandboxspy.db",
+  "api_key": "your-api-key",
+  "enable_auth": true,
+  "rate_limit": 100,
+  "enable_websocket": true,
+  "enable_dashboard": true
+}
 ```
 
-## Running the Thing
-As it's a command line binary, simply running it on an endpoint or uploading to a target system is the sole intention. The binary itself is benign and can be obfuscated with gobfuscate if you wish. 
+## Detection Methods
+
+The client detects sandboxes using:
+
+- Known sandbox hostnames and usernames
+- Virtual machine MAC address patterns
+- Sandbox-specific processes and files
+- Timing anomalies
+- CPU core count and memory checks
+
+## Project Structure
 
 ```
-./SandBoxSpy.exe or upload
+SandboxSpy/
+├── cmd/                    # Entry points
+│   ├── client/            # Client executable
+│   └── server/            # Server executable
+├── pkg/                   # Core packages
+│   ├── client/           # Client library
+│   ├── detector/         # Detection engine
+│   ├── server/           # Server implementation
+│   ├── models/           # Data models
+│   ├── security/         # Security components
+│   └── middleware/       # HTTP middleware
+├── deployments/          # Deployment configurations
+│   ├── docker/          # Docker files
+│   └── aws/             # AWS/Terraform configs
+├── scripts/             # Utility scripts
+└── output/              # Built executables
 ```
 
-## Example Output/Callback
-An example of what it sends back can be seen below(Taken from canary token and virus total). The example is using canary console slack plugin but it'll send back just the cookie header if using a standard web server.
+## Building from Source
 
-![](imgs/example1.png)
+```bash
+# Install dependencies
+go mod download
 
-Decoded output from decoder.exe:
-![](imgs/example2.png)
+# Build server
+go build -o sandboxspy-server cmd/server/main.go
 
+# Build client
+GOOS=windows GOARCH=amd64 go build -o sandboxspy-client.exe cmd/client/main.go
+```
 
-## Interesting Processes From Sandboxes
-Going to update this list with interesting processes spawned inside sandboxes, so we can build better malware.
+## Requirements
 
-- srvhost.exe - Any.run process
+- Go 1.19 or higher
+- Docker and Docker Compose (for containerized deployment)
+- PostgreSQL (for production)
+- Redis (for caching)
 
-## Todo List
-- Identify Exfil techniques
-  - DNS
-  - HTTP/S
-  - SMTP
-  - SMB
+## License
 
-- Identify sandboxes based on IP range/Hostnames/Information
-
+MIT License

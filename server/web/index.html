@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SandboxSpy Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+        
+        .connection-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .connected {
+            background: #10b981;
+            color: white;
+        }
+        
+        .disconnected {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .stat-change {
+            color: #10b981;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .panel h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        
+        .detection-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .detection-item {
+            padding: 15px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s;
+        }
+        
+        .detection-item:hover {
+            background: #f9fafb;
+        }
+        
+        .detection-item.new {
+            animation: highlight 2s ease;
+        }
+        
+        @keyframes highlight {
+            0% { background: #fef3c7; }
+            100% { background: transparent; }
+        }
+        
+        .detection-hostname {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .detection-details {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .detection-confidence {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .confidence-high {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .confidence-medium {
+            background: #fed7aa;
+            color: #92400e;
+        }
+        
+        .confidence-low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .timeline-chart {
+            height: 300px;
+            position: relative;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #6366f1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #4f46e5;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        
+        .search-bar input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .top-indicators {
+            list-style: none;
+        }
+        
+        .indicator-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .indicator-name {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .indicator-count {
+            background: #f3f4f6;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 SandboxSpy Dashboard</h1>
+            <div id="connectionStatus" class="connection-status disconnected">
+                Disconnected
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Detections</h3>
+                <div class="stat-value" id="totalDetections">0</div>
+                <div class="stat-change">+0 today</div>
+            </div>
+            <div class="stat-card">
+                <h3>Unique Hostnames</h3>
+                <div class="stat-value" id="uniqueHostnames">0</div>
+                <div class="stat-change">+0 new</div>
+            </div>
+            <div class="stat-card">
+                <h3>IP Ranges</h3>
+                <div class="stat-value" id="ipRanges">0</div>
+                <div class="stat-change">+0 new</div>
+            </div>
+            <div class="stat-card">
+                <h3>High Confidence</h3>
+                <div class="stat-value" id="highConfidence">0</div>
+                <div class="stat-change">0% of total</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="panel">
+                <h2>Recent Detections</h2>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search hostnames, IPs, usernames...">
+                </div>
+                <div class="detection-list" id="detectionList">
+                    <!-- Detections will be added here dynamically -->
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="exportBlocklist('json')">Export JSON</button>
+                    <button class="btn btn-secondary" onclick="exportBlocklist('csv')">Export CSV</button>
+                    <button class="btn btn-secondary" onclick="exportBlocklist('snort')">Export Snort Rules</button>
+                </div>
+            </div>
+            
+            <div>
+                <div class="panel" style="margin-bottom: 20px;">
+                    <h2>Top Indicators</h2>
+                    <ul class="top-indicators" id="topIndicators">
+                        <!-- Top indicators will be added here -->
+                    </ul>
+                </div>
+                
+                <div class="panel">
+                    <h2>Detection Timeline</h2>
+                    <canvas id="timelineChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let apiKey = prompt('Enter API Key:') || '';
+        const serverUrl = window.location.origin;
+        
+        // WebSocket connection
+        function connectWebSocket() {
+            const wsUrl = serverUrl.replace('http', 'ws') + '/ws';
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                console.log('Connected to WebSocket');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                setTimeout(connectWebSocket, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = 'Connected';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = 'Disconnected';
+                status.className = 'connection-status disconnected';
+            }
+        }
+        
+        function handleWebSocketMessage(data) {
+            if (data.type === 'new_sandbox') {
+                addDetectionItem(data.data, true);
+                updateStats();
+            } else if (data.type === 'batch_update') {
+                data.data.entries.forEach(entry => addDetectionItem(entry, false));
+                updateStats();
+            }
+        }
+        
+        function addDetectionItem(detection, isNew) {
+            const list = document.getElementById('detectionList');
+            const item = document.createElement('div');
+            item.className = 'detection-item' + (isNew ? ' new' : '');
+            
+            const confidence = detection.confidence || 0;
+            let confidenceClass = 'confidence-low';
+            if (confidence >= 0.8) confidenceClass = 'confidence-high';
+            else if (confidence >= 0.5) confidenceClass = 'confidence-medium';
+            
+            item.innerHTML = `
+                <div class="detection-hostname">
+                    ${detection.hostname}
+                    <span class="detection-confidence ${confidenceClass}">
+                        ${(confidence * 100).toFixed(0)}%
+                    </span>
+                </div>
+                <div class="detection-details">
+                    ${detection.username ? `User: ${detection.username} | ` : ''}
+                    ${detection.ip_address ? `IP: ${detection.ip_address} | ` : ''}
+                    ${detection.domain ? `Domain: ${detection.domain}` : ''}
+                    <br>
+                    <small>Detected: ${new Date(detection.last_seen).toLocaleString()}</small>
+                </div>
+            `;
+            
+            list.insertBefore(item, list.firstChild);
+            
+            // Keep only last 50 items
+            while (list.children.length > 50) {
+                list.removeChild(list.lastChild);
+            }
+        }
+        
+        async function loadStats() {
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/stats`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const stats = await response.json();
+                
+                document.getElementById('totalDetections').textContent = stats.total_entries || 0;
+                document.getElementById('uniqueHostnames').textContent = stats.unique_hostnames || 0;
+                document.getElementById('ipRanges').textContent = stats.unique_ip_ranges || 0;
+                document.getElementById('highConfidence').textContent = stats.high_confidence || 0;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+        
+        async function loadRecentDetections() {
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/search?q=`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const detections = await response.json();
+                
+                const list = document.getElementById('detectionList');
+                list.innerHTML = '';
+                
+                detections.forEach(detection => addDetectionItem(detection, false));
+            } catch (error) {
+                console.error('Failed to load detections:', error);
+            }
+        }
+        
+        async function loadTopIndicators() {
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/stats/top`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const data = await response.json();
+                
+                const list = document.getElementById('topIndicators');
+                list.innerHTML = '';
+                
+                if (data.top_hostnames) {
+                    data.top_hostnames.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'indicator-item';
+                        li.innerHTML = `
+                            <span class="indicator-name">${item.item}</span>
+                            <span class="indicator-count">${item.count}</span>
+                        `;
+                        list.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load top indicators:', error);
+            }
+        }
+        
+        async function loadTimeline() {
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/stats/timeline`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const timeline = await response.json();
+                
+                drawTimelineChart(timeline);
+            } catch (error) {
+                console.error('Failed to load timeline:', error);
+            }
+        }
+        
+        function drawTimelineChart(data) {
+            const canvas = document.getElementById('timelineChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple bar chart
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 20;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            if (!data || data.length === 0) return;
+            
+            const maxCount = Math.max(...data.map(d => d.count));
+            const barWidth = (width - padding * 2) / data.length;
+            
+            ctx.fillStyle = '#6366f1';
+            data.forEach((item, index) => {
+                const barHeight = (item.count / maxCount) * (height - padding * 2);
+                const x = padding + index * barWidth;
+                const y = height - padding - barHeight;
+                
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+            });
+        }
+        
+        async function exportBlocklist(format) {
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/blocklist/export?format=${format}`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `sandboxspy_blocklist.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Failed to export blocklist:', error);
+            }
+        }
+        
+        function updateStats() {
+            loadStats();
+            loadTopIndicators();
+            loadTimeline();
+        }
+        
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
+            const query = e.target.value;
+            if (query.length < 2 && query.length > 0) return;
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/v1/search?q=${encodeURIComponent(query)}`, {
+                    headers: { 'X-API-Key': apiKey }
+                });
+                const results = await response.json();
+                
+                const list = document.getElementById('detectionList');
+                list.innerHTML = '';
+                results.forEach(detection => addDetectionItem(detection, false));
+            } catch (error) {
+                console.error('Search failed:', error);
+            }
+        });
+        
+        // Initialize
+        connectWebSocket();
+        loadStats();
+        loadRecentDetections();
+        loadTopIndicators();
+        loadTimeline();
+        
+        // Refresh stats every 30 seconds
+        setInterval(updateStats, 30000);
+    </script>
+</body>
+</html>

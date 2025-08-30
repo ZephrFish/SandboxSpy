@@ -1,0 +1,27 @@
+{
+  "logging": {
+    "enabled": true,
+    "provider": "server",
+    "endpoints": {
+      "server": {
+        "url": "http://localhost:8080",
+        "api_key": "sandboxspy-af91276bca8910b6396ac2f254a25326"
+      }
+    },
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff_seconds": 2
+    }
+  },
+  "detection": {
+    "auto_index_new": true,
+    "confidence_threshold": 0.5,
+    "ip_range_detection": true,
+    "process_monitoring": true
+  },
+  "blocklist": {
+    "auto_update": true,
+    "update_interval_hours": 24,
+    "export_formats": ["json", "txt", "csv", "snort"]
+  }
+}

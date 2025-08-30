@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: sandboxspy-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - sandboxspy-network
+
+  # SandboxSpy Server
+  server:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.server
+    image: sandboxspy/server:production
+    container_name: sandboxspy-server
+    environment:
+      - API_KEY=${API_KEY}
+      - DATABASE_URL=postgres://sandboxspy:${DB_PASSWORD}@postgres:5432/sandboxspy
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - LOG_LEVEL=info
+      - CLOUDFRONT_SECRET=${CLOUDFRONT_SECRET:-}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    volumes:
+      - server_data:/data
+      - ./server_config_prod.json:/config/server_config.json:ro
+    networks:
+      - sandboxspy-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sandboxspy-postgres
+    environment:
+      POSTGRES_DB: sandboxspy
+      POSTGRES_USER: sandboxspy
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - sandboxspy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sandboxspy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache with Authentication
+  redis:
+    image: redis:7-alpine
+    container_name: sandboxspy-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - sandboxspy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backup Service (runs daily)
+  backup:
+    image: postgres:15-alpine
+    container_name: sandboxspy-backup
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/backup.sh:ro
+    command: crond -f -l 2
+    networks:
+      - sandboxspy-network
+    restart: unless-stopped
+    profiles:
+      - backup
+
+networks:
+  sandboxspy-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+  redis_data:
+  server_data:
+  nginx_cache:

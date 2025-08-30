@@ -1,0 +1,71 @@
+# Multi-stage build for SandboxSpy Server
+FROM golang:1.19-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the server
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" \
+    -o sandboxspy-server \
+    cmd/server/main.go
+
+# Final stage
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates sqlite
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/sandboxspy-server .
+
+# Copy web dashboard files
+COPY server/web ./web
+
+# Create directories for data and config
+RUN mkdir -p /data /config
+
+# Default server configuration
+RUN cat > /config/server_config.json <<EOF
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "database_path": "/data/sandboxspy.db",
+  "api_key": "default-api-key-change-in-production",
+  "enable_auth": true,
+  "rate_limit": 100,
+  "enable_websocket": true,
+  "enable_dashboard": true,
+  "tls_cert": "",
+  "tls_key": "",
+  "max_request_size": 10485760,
+  "session_timeout": 3600,
+  "enable_cors": true,
+  "allowed_origins": ["*"],
+  "enable_metrics": true,
+  "metrics_port": 9090
+}
+EOF
+
+# Expose ports
+EXPOSE 8080 9090
+
+# Volume for persistent data
+VOLUME ["/data", "/config"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/v1/health || exit 1
+
+# Run the server
+ENTRYPOINT ["/app/sandboxspy-server"]
+CMD ["/config/server_config.json"]
