@@ -1,0 +1,10 @@
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "database_path": "sandboxspy.db",
+  "api_key": "sandboxspy-af91276bca8910b6396ac2f254a25326",
+  "enable_auth": true,
+  "rate_limit": 100,
+  "enable_websocket": true,
+  "enable_dashboard": true
+}

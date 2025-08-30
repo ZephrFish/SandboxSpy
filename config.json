@@ -1,0 +1,44 @@
+{
+  "logging": {
+    "enabled": true,
+    "provider": "server",
+    "endpoints": {
+      "server": {
+        "url": "http://localhost:8080",
+        "api_key": "YOUR_SERVER_API_KEY"
+      },
+      "firebase": {
+        "project_id": "sandbox-spy-research",
+        "api_key": "YOUR_FIREBASE_API_KEY",
+        "database_url": "https://sandbox-spy-research.firebaseio.com"
+      },
+      "elasticsearch": {
+        "url": "https://your-es-cluster.region.es.amazonaws.com",
+        "api_key": "YOUR_ES_API_KEY",
+        "index": "sandbox-detections"
+      },
+      "custom": {
+        "url": "https://your-api-endpoint.com/api/sandbox",
+        "api_key": "YOUR_API_KEY",
+        "batch_endpoint": "/batch"
+      }
+    },
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff_seconds": 2
+    },
+    "batch_size": 10,
+    "flush_interval_seconds": 60
+  },
+  "detection": {
+    "auto_index_new": true,
+    "confidence_threshold": 0.7,
+    "ip_range_detection": true,
+    "process_monitoring": true
+  },
+  "blocklist": {
+    "auto_update": true,
+    "update_interval_hours": 24,
+    "export_formats": ["json", "txt", "csv"]
+  }
+}
