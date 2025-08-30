@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (optional, for production)
+  postgres:
+    image: postgres:15-alpine
+    container_name: sandboxspy-postgres
+    environment:
+      POSTGRES_DB: sandboxspy
+      POSTGRES_USER: sandboxspy
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sandboxspy-secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - sandboxspy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sandboxspy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: sandboxspy-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - sandboxspy-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # SandboxSpy Server
+  server:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.server
+    image: sandboxspy/server:latest
+    container_name: sandboxspy-server
+    environment:
+      - API_KEY=${API_KEY:-your-secure-api-key-here}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/sandboxspy.db}
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - server_data:/data
+      - server_config:/config
+      - ./server_config.json:/config/server_config.json:ro
+    ports:
+      - "8080:8080"  # API and Dashboard
+      - "9090:9090"  # Prometheus metrics
+    networks:
+      - sandboxspy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Client Builder (builds all client binaries)
+  client-builder:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.client
+      args:
+        SERVER_URL: http://sandboxspy-server:8080
+        API_KEY: ${API_KEY:-your-secure-api-key-here}
+    image: sandboxspy/client-builder:latest
+    container_name: sandboxspy-client-builder
+    volumes:
+      - ./output:/output
+    networks:
+      - sandboxspy-network
+
+  # Nginx Reverse Proxy (optional, for production with SSL)
+  nginx:
+    image: nginx:alpine
+    container_name: sandboxspy-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - sandboxspy-network
+    depends_on:
+      - server
+    profiles:
+      - production
+
+  # Prometheus (optional, for monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sandboxspy-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9091:9090"
+    networks:
+      - sandboxspy-network
+    profiles:
+      - monitoring
+
+  # Grafana (optional, for visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sandboxspy-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - sandboxspy-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+networks:
+  sandboxspy-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  server_data:
+  server_config:
+  prometheus_data:
+  grafana_data:

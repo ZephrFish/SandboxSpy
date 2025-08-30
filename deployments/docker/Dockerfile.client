@@ -1,0 +1,96 @@
+# Multi-stage build for SandboxSpy Client
+FROM golang:1.19-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev
+
+# Set working directory
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build arguments for server configuration
+ARG SERVER_URL=http://sandboxspy-server:8080
+ARG API_KEY=default-api-key-change-in-production
+
+# Create config with pre-coded URLs
+RUN cat > config.json <<EOF
+{
+  "logging": {
+    "enabled": true,
+    "provider": "server",
+    "endpoints": {
+      "server": {
+        "url": "${SERVER_URL}",
+        "api_key": "${API_KEY}"
+      }
+    },
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff_seconds": 2
+    },
+    "batch_size": 10,
+    "flush_interval_seconds": 60
+  },
+  "detection": {
+    "auto_index_new": true,
+    "confidence_threshold": 0.7,
+    "ip_range_detection": true,
+    "process_monitoring": true
+  },
+  "blocklist": {
+    "auto_update": true,
+    "update_interval_hours": 24,
+    "export_formats": ["json", "txt", "csv"]
+  }
+}
+EOF
+
+# Build for multiple platforms
+RUN GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -H=windowsgui" \
+    -o dist/sandboxspy-windows-amd64.exe \
+    cmd/client/main.go
+
+RUN GOOS=windows GOARCH=386 go build -ldflags="-s -w -H=windowsgui" \
+    -o dist/sandboxspy-windows-386.exe \
+    cmd/client/main.go
+
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" \
+    -o dist/sandboxspy-linux-amd64 \
+    cmd/client/main.go
+
+RUN GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" \
+    -o dist/sandboxspy-darwin-amd64 \
+    cmd/client/main.go
+
+# Final stage - package all binaries
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+# Copy built binaries and config
+COPY --from=builder /build/dist/ ./binaries/
+COPY --from=builder /build/config.json ./binaries/
+
+# Create volume for output
+VOLUME ["/output"]
+
+# Script to copy binaries to output volume
+RUN cat > /app/export.sh <<'EOF'
+#!/bin/sh
+echo "Exporting SandboxSpy client binaries..."
+cp -r /app/binaries/* /output/
+echo "Export complete. Binaries available in /output/"
+ls -la /output/
+EOF
+
+RUN chmod +x /app/export.sh
+
+ENTRYPOINT ["/app/export.sh"]

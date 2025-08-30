@@ -1,0 +1,16 @@
+{
+  "logging": {
+    "enabled": true,
+    "provider": "server",
+    "endpoints": {
+      "server": {
+        "url": "http://localhost:8080",
+        "api_key": "sandboxspy-415623f6ad6fa180782e7a53848d7c67"
+      }
+    }
+  },
+  "detection": {
+    "auto_index_new": true,
+    "confidence_threshold": 0.5
+  }
+}

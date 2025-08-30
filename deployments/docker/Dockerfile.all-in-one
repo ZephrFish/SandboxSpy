@@ -1,0 +1,173 @@
+# All-in-one Dockerfile that builds both client and server with pre-configured URLs
+FROM golang:1.19-alpine AS builder
+
+# Build arguments for configuration
+ARG SERVER_URL=http://localhost:8080
+ARG API_KEY=sandboxspy-api-key-change-in-production
+
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev sqlite-dev make
+
+WORKDIR /build
+
+# Copy all source code
+COPY . .
+
+# Download dependencies
+RUN go mod download
+
+# Create configuration files with pre-coded URLs
+RUN mkdir -p /build/configs
+
+# Client configuration
+RUN cat > /build/configs/client_config.json <<EOF
+{
+  "logging": {
+    "enabled": true,
+    "provider": "server",
+    "endpoints": {
+      "server": {
+        "url": "${SERVER_URL}",
+        "api_key": "${API_KEY}"
+      }
+    },
+    "retry_policy": {
+      "max_retries": 3,
+      "backoff_seconds": 2
+    }
+  },
+  "detection": {
+    "auto_index_new": true,
+    "confidence_threshold": 0.5,
+    "ip_range_detection": true,
+    "process_monitoring": true
+  },
+  "blocklist": {
+    "auto_update": true,
+    "update_interval_hours": 24,
+    "export_formats": ["json", "txt", "csv", "snort"]
+  }
+}
+EOF
+
+# Server configuration
+RUN cat > /build/configs/server_config.json <<EOF
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "database_path": "/data/sandboxspy.db",
+  "api_key": "${API_KEY}",
+  "enable_auth": true,
+  "rate_limit": 100,
+  "enable_websocket": true,
+  "enable_dashboard": true,
+  "max_request_size": 10485760,
+  "session_timeout": 3600,
+  "enable_cors": true,
+  "allowed_origins": ["*"]
+}
+EOF
+
+# Build all binaries
+RUN mkdir -p /build/bin
+
+# Build server
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-s -w -X main.Version=$(git describe --tags --always) -X main.BuildTime=$(date +%FT%T%z)" \
+    -o /build/bin/sandboxspy-server \
+    ./cmd/server
+
+# Build client for multiple platforms
+RUN GOOS=windows GOARCH=amd64 go build \
+    -ldflags="-s -w -H=windowsgui -X main.Version=$(git describe --tags --always)" \
+    -o /build/bin/sandboxspy-windows-amd64.exe \
+    ./cmd/client
+
+RUN GOOS=windows GOARCH=386 go build \
+    -ldflags="-s -w -H=windowsgui -X main.Version=$(git describe --tags --always)" \
+    -o /build/bin/sandboxspy-windows-386.exe \
+    ./cmd/client
+
+RUN GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w -X main.Version=$(git describe --tags --always)" \
+    -o /build/bin/sandboxspy-linux-amd64 \
+    ./cmd/client
+
+RUN GOOS=darwin GOARCH=amd64 go build \
+    -ldflags="-s -w -X main.Version=$(git describe --tags --always)" \
+    -o /build/bin/sandboxspy-darwin-amd64 \
+    ./cmd/client
+
+# Final stage - Multi-purpose image
+FROM alpine:latest
+
+RUN apk add --no-cache ca-certificates sqlite bash
+
+WORKDIR /app
+
+# Copy all binaries
+COPY --from=builder /build/bin/ /app/bin/
+COPY --from=builder /build/configs/ /app/configs/
+COPY --from=builder /build/server/web /app/web/
+
+# Create necessary directories
+RUN mkdir -p /data /output /config
+
+# Create entrypoint script
+RUN cat > /app/entrypoint.sh <<'EOF'
+#!/bin/bash
+set -e
+
+MODE=${1:-server}
+
+case "$MODE" in
+  server)
+    echo "Starting SandboxSpy Server..."
+    exec /app/bin/sandboxspy-server /app/configs/server_config.json
+    ;;
+  client)
+    echo "Running SandboxSpy Client..."
+    cp /app/configs/client_config.json /config/config.json
+    exec /app/bin/sandboxspy-linux-amd64
+    ;;
+  export)
+    echo "Exporting client binaries to /output..."
+    cp /app/bin/sandboxspy-* /output/
+    cp /app/configs/client_config.json /output/config.json
+    echo "Export complete. Files in /output:"
+    ls -la /output/
+    ;;
+  build)
+    echo "Available binaries:"
+    ls -la /app/bin/
+    echo ""
+    echo "To extract binaries, run:"
+    echo "  docker run -v \$(pwd)/output:/output sandboxspy:latest export"
+    ;;
+  *)
+    echo "Usage: docker run sandboxspy:latest [server|client|export|build]"
+    echo ""
+    echo "Modes:"
+    echo "  server - Run the SandboxSpy server"
+    echo "  client - Run the SandboxSpy client"
+    echo "  export - Export all client binaries to /output volume"
+    echo "  build  - Show available binaries"
+    exit 1
+    ;;
+esac
+EOF
+
+RUN chmod +x /app/entrypoint.sh
+
+# Expose server ports
+EXPOSE 8080 9090
+
+# Volumes
+VOLUME ["/data", "/output", "/config"]
+
+# Health check for server mode
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/v1/health || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["server"]
